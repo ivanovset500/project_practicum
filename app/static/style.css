@@ -60,3 +60,22 @@ a { color: #2563eb; }
     font-size: 13px;
     white-space: nowrap;
 }
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px 16px;
+    margin-top: 10px;
+}
+
+.checkbox-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-weight: normal;
+    margin: 0;
+}
+
+.checkbox-item input {
+    width: auto;
+}

@@ -1,11 +1,14 @@
 from datetime import datetime, time
+from io import BytesIO
 
 from fastapi import FastAPI, Request, Depends, Form, HTTPException, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_, text, func
 from sqlalchemy.orm import Session, joinedload
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
 
 from .database import Base, engine, get_db, SessionLocal
 from .models import User, Ticket, Comment, Direction
@@ -564,42 +567,159 @@ def change_role(user_id: int, role: str = Form(...), db: Session = Depends(get_d
         db.commit()
     return RedirectResponse("/admin", status_code=302)
 
+REPORT_COLUMNS = {
+    "id": "ID",
+    "title": "Тема",
+    "description": "Описание",
+    "status": "Статус",
+    "direction": "Направление",
+    "author": "Автор",
+    "created_at": "Дата создания",
+    "comments_count": "Кол-во комментариев",
+}
+
+REPORT_PRESETS = {
+    "summary": "Сводка по заявкам",
+    "detailed": "Детальный список заявок",
+    "by_status": "Группировка по статусам",
+    "by_direction": "Группировка по направлениям",
+    "by_author": "Группировка по пользователям",
+    "custom": "Пользовательский отчёт",
+}
+
+
+def build_report_data(
+    db: Session,
+    report_type: str,
+    date_from: str = "",
+    date_to: str = "",
+    status_filter: str = "",
+    direction_filter: str = "",
+    author_filter: str = "",
+    selected_columns: list[str] | None = None,
+):
+    query = (
+        db.query(Ticket)
+        .join(User, Ticket.author_id == User.id)
+        .outerjoin(Direction, Ticket.direction_id == Direction.id)
+        .options(
+            joinedload(Ticket.author),
+            joinedload(Ticket.direction),
+            joinedload(Ticket.comments),
+        )
+    )
+
+    if status_filter:
+        query = query.filter(Ticket.status == status_filter)
+
+    if direction_filter:
+        try:
+            query = query.filter(Ticket.direction_id == int(direction_filter))
+        except ValueError:
+            pass
+
+    if author_filter:
+        pattern = f"%{author_filter.strip()}%"
+        query = query.filter(
+            or_(
+                User.username.ilike(pattern),
+                User.full_name.ilike(pattern),
+            )
+        )
+
+    if date_from:
+        try:
+            start = datetime.combine(datetime.strptime(date_from, "%Y-%m-%d").date(), time.min)
+            query = query.filter(Ticket.created_at >= start)
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            end = datetime.combine(datetime.strptime(date_to, "%Y-%m-%d").date(), time.max)
+            query = query.filter(Ticket.created_at <= end)
+        except ValueError:
+            pass
+
+    tickets = query.order_by(Ticket.created_at.desc()).all()
+
+    total = len(tickets)
+
+    status_stats = {}
+    direction_stats = {}
+    author_stats = {}
+
+    for ticket in tickets:
+        status_stats[ticket.status] = status_stats.get(ticket.status, 0) + 1
+
+        direction_name = ticket.direction.name if ticket.direction else "Не указано"
+        direction_stats[direction_name] = direction_stats.get(direction_name, 0) + 1
+
+        author_name = ticket.author.full_name if ticket.author else "Не указан"
+        author_stats[author_name] = author_stats.get(author_name, 0) + 1
+
+    if not selected_columns:
+        selected_columns = ["id", "title", "status", "direction", "author", "created_at"]
+
+    rows = []
+
+    if report_type in ["detailed", "custom"]:
+        for ticket in tickets:
+            row = {}
+            for column in selected_columns:
+                if column == "id":
+                    row[column] = ticket.id
+                elif column == "title":
+                    row[column] = ticket.title
+                elif column == "description":
+                    row[column] = ticket.description
+                elif column == "status":
+                    row[column] = ticket.status
+                elif column == "direction":
+                    row[column] = ticket.direction.name if ticket.direction else "Не указано"
+                elif column == "author":
+                    row[column] = ticket.author.full_name if ticket.author else "Не указан"
+                elif column == "created_at":
+                    row[column] = ticket.created_at.strftime("%d.%m.%Y %H:%M") if ticket.created_at else ""
+                elif column == "comments_count":
+                    row[column] = len(ticket.comments)
+            rows.append(row)
+
+    return {
+        "total": total,
+        "tickets": tickets,
+        "status_stats": status_stats,
+        "direction_stats": direction_stats,
+        "author_stats": author_stats,
+        "rows": rows,
+        "selected_columns": selected_columns,
+    }
+
+
 @app.get("/reports", response_class=HTMLResponse)
 def reports_page(
     request: Request,
+    report_type: str = Query("summary"),
+    date_from: str = Query(""),
+    date_to: str = Query(""),
+    status_filter: str = Query(""),
+    direction_filter: str = Query(""),
+    author_filter: str = Query(""),
+    columns: list[str] = Query(default=[]),
     db: Session = Depends(get_db),
     user: User = Depends(require_admin),
 ):
-    total_tickets = db.query(Ticket).count()
+    directions = db.query(Direction).order_by(Direction.name).all()
 
-    status_stats = (
-        db.query(Ticket.status, func.count(Ticket.id))
-        .group_by(Ticket.status)
-        .all()
-    )
-
-    direction_stats = (
-        db.query(Direction.name, func.count(Ticket.id))
-        .outerjoin(Ticket, Ticket.direction_id == Direction.id)
-        .group_by(Direction.id)
-        .order_by(Direction.name)
-        .all()
-    )
-
-    user_stats = (
-        db.query(User.full_name, User.username, func.count(Ticket.id))
-        .outerjoin(Ticket, Ticket.author_id == User.id)
-        .group_by(User.id)
-        .order_by(User.full_name)
-        .all()
-    )
-
-    latest_tickets = (
-        db.query(Ticket)
-        .options(joinedload(Ticket.author), joinedload(Ticket.direction))
-        .order_by(Ticket.created_at.desc())
-        .limit(10)
-        .all()
+    report_data = build_report_data(
+        db=db,
+        report_type=report_type,
+        date_from=date_from,
+        date_to=date_to,
+        status_filter=status_filter,
+        direction_filter=direction_filter,
+        author_filter=author_filter,
+        selected_columns=columns,
     )
 
     return templates.TemplateResponse(
@@ -607,10 +727,133 @@ def reports_page(
         name="reports.html",
         context={
             "user": user,
-            "total_tickets": total_tickets,
-            "status_stats": status_stats,
-            "direction_stats": direction_stats,
-            "user_stats": user_stats,
-            "latest_tickets": latest_tickets,
+            "report_type": report_type,
+            "report_presets": REPORT_PRESETS,
+            "report_columns": REPORT_COLUMNS,
+            "statuses": TICKET_STATUSES,
+            "directions": directions,
+            "filters": {
+                "date_from": date_from,
+                "date_to": date_to,
+                "status_filter": status_filter,
+                "direction_filter": direction_filter,
+                "author_filter": author_filter,
+                "columns": report_data["selected_columns"],
+            },
+            "report_data": report_data,
+        },
+    )
+
+
+@app.get("/reports/export")
+def export_report_excel(
+    report_type: str = Query("summary"),
+    date_from: str = Query(""),
+    date_to: str = Query(""),
+    status_filter: str = Query(""),
+    direction_filter: str = Query(""),
+    author_filter: str = Query(""),
+    columns: list[str] = Query(default=[]),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    report_data = build_report_data(
+        db=db,
+        report_type=report_type,
+        date_from=date_from,
+        date_to=date_to,
+        status_filter=status_filter,
+        direction_filter=direction_filter,
+        author_filter=author_filter,
+        selected_columns=columns,
+    )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Отчёт"
+
+    ws["A1"] = "Отчёт по заявкам"
+    ws["A1"].font = Font(bold=True, size=14)
+
+    ws["A3"] = "Всего заявок"
+    ws["B3"] = report_data["total"]
+
+    current_row = 5
+
+    if report_type == "summary":
+        ws.cell(row=current_row, column=1, value="Сводка по статусам")
+        ws.cell(row=current_row, column=1).font = Font(bold=True)
+        current_row += 1
+
+        ws.append(["Статус", "Количество"])
+        for status, count in report_data["status_stats"].items():
+            ws.append([status, count])
+
+        current_row = ws.max_row + 2
+        ws.cell(row=current_row, column=1, value="Сводка по направлениям")
+        ws.cell(row=current_row, column=1).font = Font(bold=True)
+        current_row += 1
+
+        ws.append(["Направление", "Количество"])
+        for direction, count in report_data["direction_stats"].items():
+            ws.append([direction, count])
+
+        current_row = ws.max_row + 2
+        ws.cell(row=current_row, column=1, value="Сводка по пользователям")
+        ws.cell(row=current_row, column=1).font = Font(bold=True)
+        current_row += 1
+
+        ws.append(["Пользователь", "Количество"])
+        for author, count in report_data["author_stats"].items():
+            ws.append([author, count])
+
+    elif report_type == "by_status":
+        ws.append(["Статус", "Количество"])
+        for status, count in report_data["status_stats"].items():
+            ws.append([status, count])
+
+    elif report_type == "by_direction":
+        ws.append(["Направление", "Количество"])
+        for direction, count in report_data["direction_stats"].items():
+            ws.append([direction, count])
+
+    elif report_type == "by_author":
+        ws.append(["Пользователь", "Количество"])
+        for author, count in report_data["author_stats"].items():
+            ws.append([author, count])
+
+    else:
+        selected_columns = report_data["selected_columns"]
+        headers = [REPORT_COLUMNS.get(column, column) for column in selected_columns]
+        ws.append(headers)
+
+        for row in report_data["rows"]:
+            ws.append([row.get(column, "") for column in selected_columns])
+
+    for row in ws.iter_rows():
+        for cell in row:
+            cell.alignment = Alignment(vertical="top")
+            if cell.row in [1, 3, 5]:
+                cell.font = Font(bold=True)
+
+    for column_cells in ws.columns:
+        max_length = 0
+        column_letter = column_cells[0].column_letter
+        for cell in column_cells:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        ws.column_dimensions[column_letter].width = min(max_length + 3, 45)
+
+    file_stream = BytesIO()
+    wb.save(file_stream)
+    file_stream.seek(0)
+
+    filename = "report.xlsx"
+
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
         },
     )

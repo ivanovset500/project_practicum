@@ -4,116 +4,261 @@
 
 <div class="top-line">
     <div>
-        <h1>Отчёты и сводки</h1>
-        <p>Раздел доступен только администраторам.</p>
+        <h1>Отчёты</h1>
+        <p>Единый отчёт с настройками вывода информации.</p>
     </div>
 </div>
 
-<div class="card">
-    <h2>Общая сводка</h2>
-    <p><strong>Всего заявок:</strong> {{ total_tickets }}</p>
+<div class="card filter-card">
+    <h2>Настройки отчёта</h2>
+
+    <form method="get" action="/reports" class="filters">
+
+        <div>
+            <label>Вариант отчёта</label>
+            <select name="report_type">
+                {% for key, name in report_presets.items() %}
+                    <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>
+                        {{ name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Статус</label>
+            <select name="status_filter">
+                <option value="">Все статусы</option>
+                {% for status in statuses %}
+                    <option value="{{ status }}" {% if filters.status_filter == status %}selected{% endif %}>
+                        {{ status }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Направление</label>
+            <select name="direction_filter">
+                <option value="">Все направления</option>
+                {% for direction in directions %}
+                    <option value="{{ direction.id }}" {% if filters.direction_filter|string == direction.id|string %}selected{% endif %}>
+                        {{ direction.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Автор</label>
+            <input type="text"
+                   name="author_filter"
+                   value="{{ filters.author_filter }}"
+                   placeholder="ФИО или логин">
+        </div>
+
+        <div>
+            <label>Дата с</label>
+            <input type="date" name="date_from" value="{{ filters.date_from }}">
+        </div>
+
+        <div>
+            <label>Дата по</label>
+            <input type="date" name="date_to" value="{{ filters.date_to }}">
+        </div>
+
+        <div style="grid-column: 1 / -1;">
+            <label>Поля для пользовательского / детального отчёта</label>
+
+            <div class="checkbox-grid">
+                {% for key, name in report_columns.items() %}
+                    <label class="checkbox-item">
+                        <input type="checkbox"
+                               name="columns"
+                               value="{{ key }}"
+                               {% if key in filters.columns %}checked{% endif %}>
+                        {{ name }}
+                    </label>
+                {% endfor %}
+            </div>
+
+            <p class="hint">
+                Для вариантов «Детальный список заявок» и «Пользовательский отчёт» можно выбрать нужные колонки.
+            </p>
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit">Сформировать</button>
+            <a class="button secondary" href="/reports">Сбросить</a>
+        </div>
+
+    </form>
 </div>
 
-<br>
-
 <div class="card">
-    <h2>Заявки по статусам</h2>
+    <div class="top-line">
+        <div>
+            <h2>Результат отчёта</h2>
+            <p>
+                Всего заявок по выбранным условиям:
+                <strong>{{ report_data.total }}</strong>
+            </p>
+        </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Статус</th>
-                <th>Количество</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for status, count in status_stats %}
-            <tr>
-                <td>{{ status }}</td>
-                <td>{{ count }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+        <a class="button"
+           href="/reports/export?report_type={{ report_type }}{% for column in filters.columns %}&columns={{ column }}{% endfor %}&status_filter={{ filters.status_filter }}&direction_filter={{ filters.direction_filter }}&author_filter={{ filters.author_filter }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}">
+            Выгрузить в Excel
+        </a>
+    </div>
 
-<br>
+    {% if report_type == "summary" %}
 
-<div class="card">
-    <h2>Заявки по направлениям</h2>
+        <h3>Сводка по статусам</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Статус</th>
+                    <th>Количество</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for status, count in report_data.status_stats.items() %}
+                <tr>
+                    <td>{{ status }}</td>
+                    <td>{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Направление</th>
-                <th>Количество заявок</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for direction, count in direction_stats %}
-            <tr>
-                <td>{{ direction }}</td>
-                <td>{{ count }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+        <br>
 
-<br>
+        <h3>Сводка по направлениям</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Направление</th>
+                    <th>Количество</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for direction, count in report_data.direction_stats.items() %}
+                <tr>
+                    <td>{{ direction }}</td>
+                    <td>{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-<div class="card">
-    <h2>Заявки по пользователям</h2>
+        <br>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ФИО</th>
-                <th>Логин</th>
-                <th>Количество заявок</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for full_name, username, count in user_stats %}
-            <tr>
-                <td>{{ full_name }}</td>
-                <td>{{ username }}</td>
-                <td>{{ count }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+        <h3>Сводка по пользователям</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Пользователь</th>
+                    <th>Количество</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for author, count in report_data.author_stats.items() %}
+                <tr>
+                    <td>{{ author }}</td>
+                    <td>{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-<br>
+    {% elif report_type == "by_status" %}
 
-<div class="card">
-    <h2>Последние 10 заявок</h2>
+        <h3>Группировка по статусам</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Статус</th>
+                    <th>Количество</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for status, count in report_data.status_stats.items() %}
+                <tr>
+                    <td>{{ status }}</td>
+                    <td>{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Тема</th>
-                <th>Автор</th>
-                <th>Направление</th>
-                <th>Статус</th>
-                <th>Дата создания</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ticket in latest_tickets %}
-            <tr>
-                <td>{{ ticket.id }}</td>
-                <td>{{ ticket.title }}</td>
-                <td>{{ ticket.author.full_name if ticket.author else '' }}</td>
-                <td>{{ ticket.direction.name if ticket.direction else 'Не указано' }}</td>
-                <td>{{ ticket.status }}</td>
-                <td>{{ ticket.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% elif report_type == "by_direction" %}
+
+        <h3>Группировка по направлениям</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Направление</th>
+                    <th>Количество</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for direction, count in report_data.direction_stats.items() %}
+                <tr>
+                    <td>{{ direction }}</td>
+                    <td>{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    {% elif report_type == "by_author" %}
+
+        <h3>Группировка по пользователям</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Пользователь</th>
+                    <th>Количество</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for author, count in report_data.author_stats.items() %}
+                <tr>
+                    <td>{{ author }}</td>
+                    <td>{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    {% else %}
+
+        <h3>Детальный / пользовательский отчёт</h3>
+
+        {% if report_data.rows %}
+            <table>
+                <thead>
+                    <tr>
+                        {% for column in report_data.selected_columns %}
+                            <th>{{ report_columns[column] }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report_data.rows %}
+                    <tr>
+                        {% for column in report_data.selected_columns %}
+                            <td>{{ row[column] }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="hint">По выбранным условиям данные не найдены.</p>
+        {% endif %}
+
+    {% endif %}
 </div>
 
 {% endblock %}
