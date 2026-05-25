@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request, Depends, Form, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import or_, text
+from sqlalchemy import or_, text, func
 from sqlalchemy.orm import Session, joinedload
 
 from .database import Base, engine, get_db, SessionLocal
@@ -563,3 +563,54 @@ def change_role(user_id: int, role: str = Form(...), db: Session = Depends(get_d
         target.role = role
         db.commit()
     return RedirectResponse("/admin", status_code=302)
+
+@app.get("/reports", response_class=HTMLResponse)
+def reports_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    total_tickets = db.query(Ticket).count()
+
+    status_stats = (
+        db.query(Ticket.status, func.count(Ticket.id))
+        .group_by(Ticket.status)
+        .all()
+    )
+
+    direction_stats = (
+        db.query(Direction.name, func.count(Ticket.id))
+        .outerjoin(Ticket, Ticket.direction_id == Direction.id)
+        .group_by(Direction.id)
+        .order_by(Direction.name)
+        .all()
+    )
+
+    user_stats = (
+        db.query(User.full_name, User.username, func.count(Ticket.id))
+        .outerjoin(Ticket, Ticket.author_id == User.id)
+        .group_by(User.id)
+        .order_by(User.full_name)
+        .all()
+    )
+
+    latest_tickets = (
+        db.query(Ticket)
+        .options(joinedload(Ticket.author), joinedload(Ticket.direction))
+        .order_by(Ticket.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="reports.html",
+        context={
+            "user": user,
+            "total_tickets": total_tickets,
+            "status_stats": status_stats,
+            "direction_stats": direction_stats,
+            "user_stats": user_stats,
+            "latest_tickets": latest_tickets,
+        },
+    )

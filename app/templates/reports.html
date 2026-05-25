@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="top-line">
+    <div>
+        <h1>Отчёты и сводки</h1>
+        <p>Раздел доступен только администраторам.</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Общая сводка</h2>
+    <p><strong>Всего заявок:</strong> {{ total_tickets }}</p>
+</div>
+
+<br>
+
+<div class="card">
+    <h2>Заявки по статусам</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Статус</th>
+                <th>Количество</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for status, count in status_stats %}
+            <tr>
+                <td>{{ status }}</td>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<br>
+
+<div class="card">
+    <h2>Заявки по направлениям</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Направление</th>
+                <th>Количество заявок</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for direction, count in direction_stats %}
+            <tr>
+                <td>{{ direction }}</td>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<br>
+
+<div class="card">
+    <h2>Заявки по пользователям</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ФИО</th>
+                <th>Логин</th>
+                <th>Количество заявок</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for full_name, username, count in user_stats %}
+            <tr>
+                <td>{{ full_name }}</td>
+                <td>{{ username }}</td>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<br>
+
+<div class="card">
+    <h2>Последние 10 заявок</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Тема</th>
+                <th>Автор</th>
+                <th>Направление</th>
+                <th>Статус</th>
+                <th>Дата создания</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in latest_tickets %}
+            <tr>
+                <td>{{ ticket.id }}</td>
+                <td>{{ ticket.title }}</td>
+                <td>{{ ticket.author.full_name if ticket.author else '' }}</td>
+                <td>{{ ticket.direction.name if ticket.direction else 'Не указано' }}</td>
+                <td>{{ ticket.status }}</td>
+                <td>{{ ticket.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
