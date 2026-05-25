@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card form-card wide">
+    <h2>Новая заявка</h2>
+    <p class="hint">После создания заявки пользователь не сможет изменить тему и описание. Дополнительную информацию можно будет добавить в комментариях.</p>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% if directions %}
+    <form method="post">
+        <label>Направление</label>
+        <select name="direction_id" required>
+            <option value="">Выберите направление</option>
+            {% for direction in directions %}
+            <option value="{{ direction.id }}">{{ direction.name }}</option>
+            {% endfor %}
+        </select>
+        <label>Тема</label>
+        <input type="text" name="title" required>
+        <label>Описание</label>
+        <textarea name="description" rows="7" required></textarea>
+        <button type="submit">Создать заявку</button>
+        <a class="button secondary" href="/tickets">Назад</a>
+    </form>
+    {% else %}
+    <p class="error">В системе пока нет направлений для заявок. Обратитесь к администратору, чтобы он заполнил справочник направлений.</p>
+    <a class="button secondary" href="/tickets">Назад</a>
+    {% endif %}
+</div>
+{% endblock %}

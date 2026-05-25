@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="top-line">
+    <div>
+        <h1>Заявки</h1>
+        <p>Пользователь: {{ user.full_name }} | роль: {{ role_name(user.role) }}</p>
+    </div>
+    <a class="button" href="/tickets/new">Создать заявку</a>
+</div>
+
+<button class="button secondary" type="button" onclick="toggleFilterPanel()">
+    🔍 Поиск и отбор заявок
+</button>
+
+<div id="filterPanel" class="card filter-card" style="display: none; margin-top: 14px;">
+    <h3>Поиск и отбор заявок</h3>
+    <form method="get" action="/tickets" class="filters">
+        <div>
+            <label>Поиск</label>
+            <input type="text" name="search" value="{{ filters.search }}" placeholder="Тема, описание, направление или пользователь">
+        </div>
+        <div>
+            <label>Статус</label>
+            <select name="status_filter">
+                <option value="">Все статусы</option>
+                {% for status in statuses %}
+                <option value="{{ status }}" {% if filters.status_filter == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Направление</label>
+            <select name="direction_filter">
+                <option value="">Все направления</option>
+                {% for direction in directions %}
+                <option value="{{ direction.id }}" {% if filters.direction_filter|string == direction.id|string %}selected{% endif %}>{{ direction.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Дата с</label>
+            <input type="date" name="date_from" value="{{ filters.date_from }}">
+        </div>
+        <div>
+            <label>Дата по</label>
+            <input type="date" name="date_to" value="{{ filters.date_to }}">
+        </div>
+        {% if user.role == 'admin' %}
+        <div>
+            <label>Создатель</label>
+            <input type="text" name="author_filter" value="{{ filters.author_filter }}" placeholder="ФИО или логин пользователя">
+        </div>
+        {% endif %}
+        <div class="filter-actions">
+            <button type="submit">Применить</button>
+            <a class="button secondary" href="/tickets">Сбросить</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    {% if tickets %}
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Тема</th>
+            <th>Направление</th>
+            <th>Автор</th>
+            <th>Статус</th>
+            <th>Дата</th>
+            <th>Действия</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for ticket in tickets %}
+        <tr>
+            <td>{{ ticket.id }}</td>
+            <td>{{ ticket.title }}</td>
+            <td>{% if ticket.direction %}{{ ticket.direction.name }}{% else %}<span class="hint">Не указано</span>{% endif %}</td>
+            <td><a href="/users/{{ ticket.author.id }}">{{ ticket.author.full_name or ticket.author.username }}</a></td>
+            <td>
+                {% if ticket.status == "Заявка создана" %}
+                    <span class="status status-created">{{ ticket.status }}</span>
+                {% elif ticket.status == "В работе" %}
+                    <span class="status status-progress">{{ ticket.status }}</span>
+                {% elif ticket.status == "Выполнена" %}
+                    <span class="status status-done">{{ ticket.status }}</span>
+                {% else %}
+                    <span class="status">{{ ticket.status }}</span>
+                {% endif %}
+            </td>
+            <td>{{ ticket.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td class="actions">
+                <a href="/tickets/{{ ticket.id }}">Открыть</a>
+                <form method="post" action="/tickets/{{ ticket.id }}/delete" onsubmit="return confirm('Удалить заявку?')">
+                    <button class="danger" type="submit">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="hint">Заявки не найдены. Измените параметры поиска или создайте новую заявку.</p>
+    {% endif %}
+</div>
+
+<script>
+    function toggleFilterPanel() {
+        const panel = document.getElementById("filterPanel");
+        if (panel.style.display === "none" || panel.style.display === "") {
+            panel.style.display = "block";
+        } else {
+            panel.style.display = "none";
+        }
+    }
+</script>
+{% endblock %}

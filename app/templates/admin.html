@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Администрирование пользователей</h1>
+<div class="card">
+    <table>
+        <thead>
+        <tr><th>ID</th><th>ФИО</th><th>Логин</th><th>Роль</th><th>Изменить роль</th></tr>
+        </thead>
+        <tbody>
+        {% for item in users %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td><a href="/users/{{ item.id }}">{{ item.full_name or item.username }}</a></td>
+            <td>{{ item.username }}</td>
+            <td>{{ role_name(item.role) }}</td>
+            <td>
+                {% if item.username != 'admin' %}
+                <form method="post" action="/admin/users/{{ item.id }}/role" class="inline-form">
+                    <select name="role">
+                        <option value="user" {% if item.role == 'user' %}selected{% endif %}>Пользователь</option>
+                        <option value="admin" {% if item.role == 'admin' %}selected{% endif %}>Администратор</option>
+                    </select>
+                    <button type="submit">Сохранить</button>
+                </form>
+                {% else %}Главный администратор{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

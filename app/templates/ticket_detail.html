@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card ticket-detail">
+    <div class="top-line">
+        <div>
+            <h1>Заявка №{{ ticket.id }}</h1>
+            <p class="hint">
+                Создана: {{ ticket.created_at.strftime('%d.%m.%Y %H:%M') }} |
+                Автор: <a href="/users/{{ ticket.author.id }}">{{ ticket.author.full_name or ticket.author.username }}</a>
+            </p>
+        </div>
+        <a class="button secondary" href="/tickets">К списку заявок</a>
+    </div>
+
+    <div class="ticket-info">
+        <p><strong>Направление:</strong> {% if ticket.direction %}{{ ticket.direction.name }}{% else %}<span class="hint">Не указано</span>{% endif %}</p>
+        <p><strong>Тема:</strong> {{ ticket.title }}</p>
+        <p><strong>Описание:</strong></p>
+        <div class="description-box">{{ ticket.description }}</div>
+        <p><strong>Статус:</strong>
+            {% if ticket.status == "Заявка создана" %}
+                <span class="status status-created">{{ ticket.status }}</span>
+            {% elif ticket.status == "В работе" %}
+                <span class="status status-progress">{{ ticket.status }}</span>
+            {% elif ticket.status == "Выполнена" %}
+                <span class="status status-done">{{ ticket.status }}</span>
+            {% else %}
+                <span class="status">{{ ticket.status }}</span>
+            {% endif %}
+        </p>
+    </div>
+
+    {% if user.role == 'admin' %}
+    <form method="post" action="/tickets/{{ ticket.id }}/status" class="status-form">
+        <label>Изменить статус</label>
+        <select name="status_value">
+            {% for status in statuses %}
+            <option value="{{ status }}" {% if ticket.status == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Сохранить статус</button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="card chat-card">
+    <h2>Комментарии</h2>
+    <div class="chat">
+        {% if ticket.comments %}
+            {% for comment in ticket.comments %}
+            <div class="message {% if comment.author_id == user.id %}my-message{% else %}other-message{% endif %}">
+                <div class="message-header">
+                    <strong>{{ comment.author.full_name or comment.author.username }}</strong>
+                    <span>{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                </div>
+                <div class="message-text">{{ comment.text }}</div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="hint">Комментариев пока нет. Напишите первый комментарий по заявке.</p>
+        {% endif %}
+    </div>
+
+    <form method="post" action="/tickets/{{ ticket.id }}/comment" class="comment-form">
+        <label>Новый комментарий</label>
+        <textarea name="comment_text" rows="4" required placeholder="Введите комментарий"></textarea>
+        <button type="submit">Отправить комментарий</button>
+    </form>
+</div>
+{% endblock %}

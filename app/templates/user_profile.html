@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card form-card wide">
+    <div class="top-line">
+        <h1>Профиль пользователя</h1>
+        <a class="button secondary" href="/users">К списку пользователей</a>
+    </div>
+    <p><strong>ФИО:</strong> {{ profile.full_name or profile.username }}</p>
+    <p><strong>Логин:</strong> {{ profile.username }}</p>
+    <p><strong>Дата регистрации:</strong> {{ profile.created_at.strftime('%d.%m.%Y %H:%M') if profile.created_at else '' }}</p>
+    <p><strong>Роль:</strong> {{ role_name(profile.role) }}</p>
+    <p><strong>Количество созданных заявок:</strong> {{ tickets_count }}</p>
+</div>
+{% endblock %}

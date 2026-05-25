@@ -1,0 +1,62 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; background: #f3f6fb; color: #1f2937; }
+header { background: #1f2937; color: white; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+.logo { font-size: 20px; font-weight: bold; }
+nav a { color: white; text-decoration: none; margin-left: 20px; }
+main { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+.card { background: white; border-radius: 14px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+.hero { text-align: center; padding: 60px 30px; }
+.button, button { display: inline-block; background: #2563eb; color: white; border: 0; border-radius: 8px; padding: 10px 16px; text-decoration: none; cursor: pointer; font-size: 14px; }
+.secondary { background: #64748b; }
+.danger { background: #dc2626; padding: 7px 10px; }
+.form-card { max-width: 420px; margin: 0 auto; }
+.wide { max-width: 720px; }
+label { display: block; margin: 14px 0 6px; font-weight: bold; }
+input, textarea, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; }
+.error { color: #dc2626; }
+.hint { color: #64748b; font-size: 14px; }
+.top-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+th { background: #f8fafc; }
+.actions { display: flex; gap: 10px; align-items: center; }
+.actions form { margin: 0; }
+.status { padding: 5px 9px; border-radius: 999px; font-size: 13px; }
+.created { background: #e0f2fe; }
+.in_progress { background: #fef3c7; }
+.done { background: #dcfce7; }
+
+.filter-card { margin-bottom: 20px; }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; align-items: end; }
+.filter-actions { display: flex; gap: 10px; align-items: center; }
+.ticket-detail { margin-bottom: 20px; }
+.ticket-info { margin-top: 16px; }
+.description-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; white-space: pre-wrap; }
+.status-form { margin-top: 18px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; max-width: 520px; }
+.chat-card { margin-top: 20px; }
+.chat { display: flex; flex-direction: column; gap: 14px; margin: 18px 0; }
+.message { max-width: 78%; border-radius: 14px; padding: 12px 14px; border: 1px solid #e5e7eb; }
+.my-message { margin-left: auto; background: #e0f2fe; }
+.other-message { margin-right: auto; background: #f8fafc; }
+.message-header { display: flex; gap: 12px; justify-content: space-between; font-size: 13px; color: #475569; margin-bottom: 7px; }
+.message-text { white-space: pre-wrap; }
+.comment-form { margin-top: 16px; }
+.Заявка_создана { background: #e0f2fe; }
+.В_работе { background: #fef3c7; }
+.Выполнена { background: #dcfce7; }
+
+/* Итерация: направления, профили пользователей, русские роли */
+a { color: #2563eb; }
+.inline-form { display: flex; gap: 10px; align-items: center; margin: 0; }
+.inline-form input, .inline-form select { min-width: 180px; }
+.status-created { background: #2563eb !important; color: #ffffff !important; }
+.status-progress { background: #facc15 !important; color: #1f2937 !important; }
+.status-done { background: #16a34a !important; color: #ffffff !important; }
+.status {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+}

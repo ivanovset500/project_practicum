@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Профили пользователей</h1>
+<div class="card">
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>ФИО</th>
+            <th>Логин</th>
+            <th>Дата регистрации</th>
+            <th>Роль</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in users %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td><a href="/users/{{ item.id }}">{{ item.full_name or item.username }}</a></td>
+            <td>{{ item.username }}</td>
+            <td>{{ item.created_at.strftime('%d.%m.%Y %H:%M') if item.created_at else '' }}</td>
+            <td>{{ role_name(item.role) }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
