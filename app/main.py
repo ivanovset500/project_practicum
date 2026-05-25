@@ -408,26 +408,75 @@ def delete_ticket(ticket_id: int, db: Session = Depends(get_db), user: User = De
     return RedirectResponse("/tickets", status_code=302)
 
 
-@app.get("/users", response_class=HTMLResponse)
-def users_list(request: Request, db: Session = Depends(get_db), user: User = Depends(require_user)):
-    users = db.query(User).order_by(User.full_name, User.username).all()
+@app.get("/users")
+def users_list(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user)
+):
+
+    if user.role != "admin":
+        return templates.TemplateResponse(
+            request=request,
+            name="403.html",
+            context={
+                "user": user
+            },
+            status_code=403
+        )
+
+    users = db.query(User).all()
+
     return templates.TemplateResponse(
         request=request,
         name="users.html",
-        context={"user": user, "users": users},
+        context={
+            "user": user,
+            "users": users
+        }
     )
 
 
 @app.get("/users/{user_id}", response_class=HTMLResponse)
-def user_profile(user_id: int, request: Request, db: Session = Depends(get_db), user: User = Depends(require_user)):
-    profile = db.query(User).filter(User.id == user_id).first()
+def user_profile(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user)
+):
+
+    if user.role != "admin" and user.id != user_id:
+        return templates.TemplateResponse(
+            request=request,
+            name="403.html",
+            context={
+                "user": user
+            },
+            status_code=403
+        )
+
+    profile = db.query(User).filter(
+        User.id == user_id
+    ).first()
+
     if not profile:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-    tickets_count = db.query(Ticket).filter(Ticket.author_id == profile.id).count()
+        raise HTTPException(
+            status_code=404,
+            detail="Пользователь не найден"
+        )
+
+    tickets_count = db.query(Ticket).filter(
+        Ticket.author_id == profile.id
+    ).count()
+
     return templates.TemplateResponse(
         request=request,
         name="user_profile.html",
-        context={"user": user, "profile": profile, "tickets_count": tickets_count},
+        context={
+            "user": user,
+            "profile": profile,
+            "tickets_count": tickets_count
+        },
     )
 
 
