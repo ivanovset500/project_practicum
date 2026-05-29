@@ -4,8 +4,8 @@
     <h2>Регистрация</h2>
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <form method="post">
-        <label>Фамилия, имя, отчество</label>
-        <input type="text" name="full_name" required placeholder="Иванов Иван Иванович">
+        <label>ФИО</label>
+        <input type="text" name="full_name">
         <label>Логин</label>
         <input type="text" name="username" required>
         <label>Пароль</label>
